@@ -1,0 +1,829 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PlumeGuard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Roboto+Condensed:wght@500;700&family=Roboto+Slab:wght@600;700&family=Roboto:wght@400;500;700&display=swap">
+<style>
+/* Layout: control bar, then a supervisor tablet (aerial map + alert cards + mini detector) beside detail panels; crew wearable and HSE recap as separate views. TI4021 colorway. */
+:root{
+  --bg:#F3F7FC; --surface:#FFFFFF; --surface-2:#F4F7FB; --line:#D8DEE8;
+  --ink:#1E3666; --text:#2F3A4C; --muted:#667389;
+  --navy:#145AA8; --on-navy:#FFFFFF; --sky:#60B4FC; --blue:#2F86E0;
+  --title1:#3088FC; --title2:#1FA8E8;
+  --appbar:#12305E; --bezel:#1A1D23;
+  --ok:#007E36; --ok-bg:#E4F0E4; --warn:#E4781E; --warn-bg:#FCF0DE;
+  --alarm:#F2B705; --alarm-bg:#FFF3CC; --alarm-ink:#3F3100; --bad:#C6302A; --bad-bg:#FBE3E3;
+  --cr:#0048A8; --cr-bg:#E4EAF6;
+  --f-display:"Roboto Slab", Georgia, serif;
+  --f-pill:"Poppins", "Segoe UI", Arial, sans-serif;
+  --f-body:"Roboto", "Segoe UI", Arial, sans-serif;
+  --f-label:"Roboto Condensed", "Arial Narrow", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1522; --surface:#142033; --surface-2:#1A2940; --line:#2A3A55;
+  --ink:#DCE7F7; --text:#C9D3E3; --muted:#8D9AB0;
+  --navy:#2563B8; --on-navy:#FFFFFF; --sky:#60B4FC; --blue:#5AA2EE;
+  --title1:#5CA6FF; --title2:#6FDCFF; --appbar:#0F2547; --bezel:#05070A;
+  --ok:#3DBE6E; --ok-bg:#12301F; --warn:#F09A4A; --warn-bg:#3A2814;
+  --alarm:#F2C230; --alarm-bg:#3A3110; --alarm-ink:#2A2000; --bad:#F0625A; --bad-bg:#3A1717;
+  --cr:#7FB0F5; --cr-bg:#172A48; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0D1522; --surface:#142033; --surface-2:#1A2940; --line:#2A3A55;
+  --ink:#DCE7F7; --text:#C9D3E3; --muted:#8D9AB0;
+  --navy:#2563B8; --on-navy:#FFFFFF; --sky:#60B4FC; --blue:#5AA2EE;
+  --title1:#5CA6FF; --title2:#6FDCFF; --appbar:#0F2547; --bezel:#05070A;
+  --ok:#3DBE6E; --ok-bg:#12301F; --warn:#F09A4A; --warn-bg:#3A2814;
+  --alarm:#F2C230; --alarm-bg:#3A3110; --alarm-ink:#2A2000; --bad:#F0625A; --bad-bg:#3A1717;
+  --cr:#7FB0F5; --cr-bg:#172A48; color-scheme:dark;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{color-scheme:light}
+body{background:var(--bg);color:var(--text);font:14px/1.45 var(--f-body);margin:0}
+.wrap{max-width:1400px;margin:0 auto;padding-inline:16px;padding-block:16px 32px;display:grid;gap:14px}
+button,select,input{font:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+svg{display:block}
+
+/* header */
+.top{display:flex;align-items:stretch;gap:14px;flex-wrap:wrap}
+.brand{display:flex;gap:12px;flex:1 1 420px;min-width:0}
+.brand .bar{width:12px;border-radius:3px;background:var(--sky);flex:none}
+.brand h1{margin:0;font:700 clamp(26px,3.2vw,36px)/1.1 var(--f-display);color:var(--title1);text-wrap:balance}
+.brand h1 span{color:var(--title2)}
+.brand p{margin:4px 0 0;color:var(--ink);font-size:14px}
+.lockup{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 10px 8px 22px}
+.lockup b{display:block;font:800 15px/1.1 var(--f-pill);color:var(--ink);text-align:right}
+.lockup small{display:block;font:700 13px/1.2 var(--f-pill);color:var(--ink);text-align:right}
+.lockup .logo{width:48px;height:48px;border-radius:50%;background:#fff;flex:none}
+
+/* control bar */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.btn{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:999px;padding:8px 16px;font-weight:700}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--navy);color:var(--on-navy);border-color:var(--navy)}
+.btn.small{padding:5px 11px;font-size:12.5px}
+.clock{margin-left:auto;display:flex;gap:10px;align-items:center;color:var(--muted);font:500 13px var(--f-label)}
+.clock b{font:700 20px var(--f-label);color:var(--ink)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 18px;font:700 14px var(--f-pill)}
+.tab[aria-selected="true"],.tab[aria-pressed="true"]{background:var(--navy);color:var(--on-navy);border-color:var(--navy)}
+.narr{display:flex;gap:10px;align-items:flex-start;background:var(--cr-bg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--ink)}
+.narr .tag{font:700 12px var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--on-navy);background:var(--navy);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.narr p{margin:0;min-width:0}
+
+/* page grid & cards */
+.grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:14px;align-items:start}
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.pill-h{margin:0 0 10px;background:var(--navy);color:var(--on-navy);border-radius:999px;padding:7px 16px;font:800 14px/1.2 var(--f-pill);text-align:center}
+.sub{color:var(--muted);font-size:12.5px;margin:0}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 10px;font:700 12px var(--f-label);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.c-aman{background:var(--ok-bg);color:var(--ok)}
+.c-kuning{background:var(--alarm);color:var(--alarm-ink)}
+.c-merah{background:var(--bad);color:#fff}
+.c-info{background:var(--cr-bg);color:var(--cr)}
+.c-warn{background:var(--warn-bg);color:var(--warn)}
+.list{display:grid;gap:8px}
+.row{border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:grid;gap:5px;background:var(--surface)}
+.row .l1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row .l1 b{color:var(--ink)}
+.row .meta{color:var(--muted);font-size:12.5px}
+.row .acts{display:flex;gap:6px;flex-wrap:wrap}
+.empty{color:var(--muted);font-size:13px;padding:8px 2px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--navy);color:var(--on-navy);font:700 12px var(--f-label);letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:7px 8px}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:nth-child(even) td{background:var(--surface-2)}
+.tbl{overflow-x:auto}
+.crew-ppm{font:700 18px var(--f-label);color:var(--ink)}
+
+/* ---------- supervisor tablet ---------- */
+.tablet{background:var(--bezel);border-radius:34px;padding:16px;box-shadow:inset 0 0 0 2px #2B3038;min-width:0}
+.tscreen{border-radius:18px;overflow:hidden;background:var(--surface);display:grid}
+.statusbar{background:var(--appbar);color:#DCE6F5;display:flex;align-items:center;gap:14px;padding:5px 16px;font:500 12px var(--f-label)}
+.statusbar .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.appbar{background:var(--appbar);color:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:8px 16px 11px;border-top:1px solid rgba(255,255,255,.08)}
+.appbar .it{display:flex;align-items:center;gap:7px;font:600 15px var(--f-pill)}
+.appbar .logo-t{font:700 19px var(--f-pill)}
+.appbar .sep{width:1px;height:22px;background:rgba(255,255,255,.3)}
+.appbar .r{margin-left:auto;display:flex;align-items:center;gap:14px;font:500 14px var(--f-body)}
+.live{width:12px;height:12px;border-radius:50%;background:#3CC35E}
+.mapbox{position:relative;background:#7C7F68}
+#map{width:100%;height:auto;touch-action:none;cursor:default}
+#map text{font-family:var(--f-label)}
+.windbadge{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:8px;pointer-events:none}
+.windbadge .arr{width:62px;height:40px;border-radius:10px;background:rgba(255,255,255,.88);display:grid;place-items:center}
+.windbadge .box{border-radius:8px;padding:6px 12px;font:700 13px/1.25 var(--f-label);letter-spacing:.03em;text-transform:uppercase;color:#1B1B1B;background:#FFFFFF}
+.windbadge .box.chg{background:#F7D33C}
+.mapctl{position:absolute;right:12px;top:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;justify-content:space-between}
+.mapctl .grp{display:flex;flex-direction:column;gap:8px}
+.mbtn{width:36px;height:36px;border-radius:50%;border:0;background:#FFFFFF;color:#1E2B40;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.mbtn[aria-pressed="true"]{background:#DCE8FA}
+.scalebar{position:absolute;left:12px;bottom:10px;background:rgba(255,255,255,.88);border-radius:6px;padding:4px 8px 3px;font:500 11px var(--f-label);color:#1E2B40}
+.scalebar .ln{height:6px;border:2px solid #1E2B40;border-top:0;margin-top:2px}
+.scalebar .lb{display:flex;justify-content:space-between}
+.tbottom{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:12px;padding:12px;background:var(--surface)}
+.tcards{display:grid;gap:8px;align-content:start;min-width:0}
+.tcard{display:grid;grid-template-columns:40px minmax(0,1fr) auto 14px;gap:12px;align-items:center;border-radius:12px;padding:10px 12px;border:1px solid transparent;text-align:left;color:var(--text);background:var(--surface-2);width:100%}
+.tcard .ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.tcard .tt{font:700 15px/1.25 var(--f-body);min-width:0}
+.tcard .ss{font-size:12.5px;color:var(--muted);margin-top:2px}
+.tcard .chev{color:var(--muted)}
+.tcard.red{background:var(--bad-bg);border-color:color-mix(in srgb,var(--bad) 30%,transparent)}
+.tcard.red .ic{background:var(--bad)} .tcard.red .tt{color:var(--bad)}
+.tcard.yellow{background:var(--alarm-bg);border-color:color-mix(in srgb,var(--alarm) 45%,transparent)}
+.tcard.yellow .ic{background:var(--alarm);color:#2A2000} .tcard.yellow .tt{color:var(--ink)}
+.tcard.blue{background:var(--cr-bg);border-color:color-mix(in srgb,var(--cr) 25%,transparent)}
+.tcard.blue .ic{background:var(--appbar)} .tcard.blue .tt{color:var(--ink)}
+.tcard.green{background:var(--ok-bg)} .tcard.green .ic{background:var(--ok)} .tcard.green .tt{color:var(--ok)}
+.tcard[data-focus]{cursor:pointer}
+.tact{border:0;border-radius:9px;padding:9px 14px;font:700 13.5px var(--f-body);display:flex;gap:8px;align-items:center;white-space:nowrap}
+.tact.red{background:var(--bad);color:#fff}
+.tact.navy{background:var(--appbar);color:#fff}
+.more{font-size:12.5px;color:var(--muted);padding-left:4px}
+.mini{border-radius:12px;padding:12px;display:grid;gap:6px;justify-items:center;text-align:center;align-content:start;border:2px solid transparent}
+.mini.aman{background:var(--appbar);color:#fff}
+.mini.kuning{background:#F7D33C;color:#14274A;border-color:#E2B800}
+.mini.merah{background:#C6302A;color:#fff}
+.mini .h{display:flex;gap:6px;align-items:center;font:800 17px var(--f-pill);letter-spacing:.02em}
+.mini .who{font:500 12px var(--f-label);opacity:.85}
+.mini .lbl{font:700 13px var(--f-body)}
+.mini .big{font:800 28px/1 var(--f-pill)}
+.mini .ppm{font:700 13px var(--f-label)}
+.mini button{width:100%;border:0;border-radius:9px;padding:9px;font:800 15px var(--f-pill);background:#14274A;color:#fff}
+.mini.merah button,.mini.aman button{background:#fff;color:#14274A}
+.mini button:disabled{opacity:.45;cursor:not-allowed}
+
+/* sim panel */
+details.sim{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+details.sim summary{cursor:pointer;font:700 14px var(--f-pill);color:var(--ink)}
+.simgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 18px;margin-top:10px}
+.simgrid label{display:grid;gap:4px;font:500 13px var(--f-label);color:var(--ink)}
+.simgrid input[type=range]{width:100%;accent-color:var(--navy)}
+.toggle{display:flex;gap:8px;align-items:center}
+
+/* pre-shift */
+.steps{display:grid;gap:8px}
+.step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.step .n{width:28px;height:28px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font:700 13px var(--f-label);color:var(--muted)}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step b{color:var(--ink)}
+.step .sub{margin-top:2px}
+.step select{margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--surface);color:var(--text)}
+
+/* crew device */
+.devgrid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+.device{background:#1B2433;border-radius:36px;padding:16px;border:2px solid #0E1520;max-width:340px;width:100%;margin:0 auto}
+.device .strap{height:22px;background:#2A3446;border-radius:10px;margin:-6px 30px 10px}
+.device .strap.b{margin:10px 30px -6px}
+.screen{border-radius:22px;padding:16px;display:grid;gap:8px;min-height:360px;transition:background-color .3s}
+.screen.aman{background:#10294A;color:#E9F1FB}
+.screen.kuning{background:#F7D33C;color:#14274A}
+.screen.merah{background:#C6302A;color:#FFFFFF}
+.screen .st{font:800 26px/1.05 var(--f-pill)}
+.screen .rs{font:500 13px var(--f-label);opacity:.92}
+.screen .ppm{font:700 46px/1 var(--f-label)}
+.screen .ppm small{font-size:16px;font-weight:500;margin-left:4px}
+.screen .arrowbox{display:flex;align-items:center;gap:12px}
+.screen .arrowbox svg{width:88px;height:88px;flex:none}
+.screen .row2{display:flex;justify-content:space-between;gap:8px;font:500 13px var(--f-label);flex-wrap:wrap}
+.ackbtn{border:0;border-radius:14px;padding:14px;font:800 18px var(--f-pill);background:#FFFFFF;color:#10294A}
+.screen.kuning .ackbtn{background:#14274A;color:#fff}
+.ackbtn:disabled{opacity:.35;cursor:not-allowed}
+.vib{font:700 12px var(--f-label);letter-spacing:.05em;text-transform:uppercase}
+.crewpick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.explain h3{margin:0 0 6px;font:700 16px var(--f-display);color:var(--ink)}
+.explain ul{margin:0 0 12px;padding-left:18px}
+.explain li{margin:3px 0}
+
+/* HSE */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.kpi .v{font:700 30px/1.1 var(--f-label);color:var(--ink)}
+.kpi .v small{font-size:13px;color:var(--muted);font-weight:500;margin-left:6px}
+.kpi .k{font:500 12.5px var(--f-label);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.kpi .t{font-size:12px;margin-top:2px}
+.foot{color:var(--muted);font-size:12px;display:grid;gap:6px}
+.layers{display:flex;flex-wrap:wrap;gap:6px}
+.layers span{border-radius:999px;padding:3px 10px;font:700 12px var(--f-label)}
+.L-tek{background:var(--navy);color:var(--on-navy)}
+.L-pro{background:var(--cr-bg);color:var(--cr)}
+.L-org{background:var(--warn-bg);color:var(--warn)}
+.L-man{background:var(--ok-bg);color:var(--ok)}
+
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.tbottom{grid-template-columns:minmax(0,1fr)}.devgrid{grid-template-columns:minmax(0,1fr)}.tablet{padding:8px;border-radius:20px}.appbar .it:not(.keep){display:none}.appbar .sep{display:none}.tcard{grid-template-columns:34px minmax(0,1fr) 14px}.tcard .ic{width:34px;height:34px}.tcard .tact{grid-column:2/4;justify-self:start}}
+@media (max-width:560px){.clock{margin-left:0}.brand h1{font-size:26px}.windbadge .arr{display:none}}
+@media (prefers-reduced-motion:reduce){.screen{transition:none}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="bar" aria-hidden="true"></div>
+      <div style="min-width:0">
+        <h1>PlumeGuard <span>Sumur W-3</span></h1>
+        <p>Prototype konsep sistem kerja aman H₂S · Kasus D · alarm dua tingkat, peta angin bersama, dan alur satu shift</p>
+      </div>
+    </div>
+    <div class="lockup"><div><b>TI4021</b><small>Rekayasa Kognitif</small></div><img class="logo" alt="Logo Institut Teknologi Bandung" width="48" height="48" src="data:image/png;base64,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"></div>
+  </header>
+
+  <div class="controls" role="group" aria-label="Kontrol simulasi">
+    <button class="btn primary" id="bScenario">Putar skenario Kasus D</button>
+    <button class="btn" id="bPause">Jeda</button>
+    <button class="btn" id="bReset">Reset</button>
+    <label class="toggle" for="speed" style="color:var(--muted);font:500 13px var(--f-label)">Kecepatan
+      <select id="speed" class="btn small"><option value="1">1×</option><option value="5" selected>5×</option><option value="10">10×</option></select>
+    </label>
+    <div class="tabs" role="tablist" aria-label="Tampilan pengguna">
+      <button class="tab" role="tab" id="t-sup" aria-selected="true" data-view="sup">Supervisor</button>
+      <button class="tab" role="tab" id="t-dev" aria-selected="false" data-view="dev">Detektor kru</button>
+      <button class="tab" role="tab" id="t-hse" aria-selected="false" data-view="hse">HSE</button>
+    </div>
+    <div class="clock"><span>Waktu simulasi</span><b class="num" id="clock">08:30:00</b></div>
+  </div>
+
+  <div class="narr" aria-live="polite"><span class="tag" id="narrTag">Siap</span><p id="narr">Tekan "Putar skenario Kasus D" untuk memutar ulang kasus dengan PlumeGuard aktif, atau atur angin dan posisi kru sendiri di Panel simulasi.</p></div>
+
+  <!-- SUPERVISOR -->
+  <section id="v-sup" class="grid" role="tabpanel" aria-labelledby="t-sup">
+    <div class="col">
+      <div class="tablet">
+        <div class="tscreen">
+          <div class="statusbar"><span class="num" id="sbTime">08:30</span><span>Kam, 2 Okt 2026</span>
+            <span class="r"><svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" fill="currentColor"/><rect x="5" y="5" width="3" height="7" fill="currentColor"/><rect x="10" y="2" width="3" height="10" fill="currentColor"/><rect x="15" y="0" width="3" height="12" fill="currentColor" opacity=".5"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true"><path d="M8 11.5 L5.6 8.8 a3.4 3.4 0 0 1 4.8 0 Z M2.8 6 a7.4 7.4 0 0 1 10.4 0 l-1.4 1.5 a5.4 5.4 0 0 0 -7.6 0 Z M0 3.2 a11.4 11.4 0 0 1 16 0 l-1.4 1.4 a9.4 9.4 0 0 0 -13.2 0 Z" fill="currentColor"/></svg>100%</span></div>
+          <div class="appbar">
+            <span class="it keep"><svg width="26" height="28" viewBox="0 0 26 28" aria-hidden="true"><path d="M13 1 L24 5 V13 C24 20 19 25 13 27 C7 25 2 20 2 13 V5 Z" fill="#3F8EF0"/><path d="M8 15 Q13 8 18 15 Q13 13 8 15 Z M7 18 Q13 12 19 18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span class="logo-t">PlumeGuard</span></span>
+            <span class="sep" aria-hidden="true"></span>
+            <span class="it"><svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M8 0 C3.6 0 0 3.5 0 7.8 C0 13.5 8 20 8 20 C8 20 16 13.5 16 7.8 C16 3.5 12.4 0 8 0 Z M8 10.6 a2.8 2.8 0 1 1 0 -5.6 a2.8 2.8 0 0 1 0 5.6 Z" fill="currentColor"/></svg>Sumur W-3</span>
+            <span class="sep" aria-hidden="true"></span>
+            <span class="it"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><circle r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M0 -9 V-6.5 M0 9 V6.5 M-9 0 H-6.5 M9 0 H6.5 M-6.4 -6.4 L-4.6 -4.6 M6.4 6.4 L4.6 4.6 M-6.4 6.4 L-4.6 4.6 M6.4 -6.4 L4.6 -4.6"/></g></svg>Shift pagi</span>
+            <span class="r"><span style="display:flex;gap:7px;align-items:center"><span class="live" id="liveDot"></span><span id="liveTxt">Data langsung</span></span>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.7 7.7 0 0 0-1.7-1L14.9 3h-4l-.4 2.9a7.7 7.7 0 0 0-1.7 1l-2.5-1-2 3.5L6.4 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.7 7.7 0 0 0 1.7 1l.4 2.9h4l.4-2.9a7.7 7.7 0 0 0 1.7-1l2.5 1 2-3.5ZM12.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+              <svg width="6" height="18" viewBox="0 0 6 18" aria-hidden="true"><circle cx="3" cy="3" r="2" fill="currentColor"/><circle cx="3" cy="9" r="2" fill="currentColor"/><circle cx="3" cy="15" r="2" fill="currentColor"/></svg></span>
+          </div>
+          <div class="mapbox">
+            <svg id="map" viewBox="0 0 1000 640" role="img" aria-label="Peta udara sumur W-3 dengan area bahaya gas, arah angin, sumber bocor, titik kumpul, dan posisi tiga kru. Ikon kru bisa diseret."></svg>
+            <div class="windbadge" aria-live="polite"><div class="arr"><svg width="46" height="26" viewBox="-23 -13 46 26" aria-hidden="true"><g id="wbArrow"><path d="M-20 -5 H6 V-11 L20 0 L6 11 V5 H-20 Z" fill="#2F86E0"/></g></svg></div><div class="box" id="wbBox"><div id="wb1">Angin dari TG</div><div id="wb2">2,2 m/s</div></div></div>
+            <div class="mapctl">
+              <div class="grp">
+                <button class="mbtn" id="mCompass" title="Atur ulang tampilan peta" aria-label="Atur ulang tampilan peta"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0 -9 L3 0 L-3 0 Z" fill="#D7261E"/><path d="M0 9 L3 0 L-3 0 Z" fill="#1E2B40"/></svg></button>
+                <button class="mbtn" id="mLayers" title="Tampilkan atau sembunyikan sensor area" aria-label="Lapisan sensor area" aria-pressed="true"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Zm-7.6 8.6L2 12.8l10 5 10-5-2.4-1.2L12 15.4ZM4.4 15.6 2 16.8l10 5 10-5-2.4-1.2L12 19.4Z" fill="currentColor"/></svg></button>
+                <button class="mbtn" id="mLocate" title="Fokus ke kru yang dipilih" aria-label="Fokus ke kru yang dipilih"><svg width="20" height="20" viewBox="-12 -12 24 24" aria-hidden="true"><circle r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle r="2.4" fill="currentColor"/><path d="M0 -11 V-7 M0 11 V7 M-11 0 H-7 M11 0 H7" stroke="currentColor" stroke-width="2"/></svg></button>
+              </div>
+              <div class="grp">
+                <button class="mbtn" id="mZin" aria-label="Perbesar peta"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2.4"/></svg></button>
+                <button class="mbtn" id="mZout" aria-label="Perkecil peta"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h12" stroke="currentColor" stroke-width="2.4"/></svg></button>
+              </div>
+            </div>
+            <div class="scalebar" aria-hidden="true"><div class="lb"><span>0</span><span id="sbMid">25</span><span id="sbEnd">50 m</span></div><div class="ln" id="sbLine" style="width:90px"></div></div>
+          </div>
+          <div class="tbottom">
+            <div class="tcards" id="tcards"></div>
+            <div class="mini aman" id="mini">
+              <div class="h" id="mH">AMAN</div>
+              <div class="who" id="mWho">Detektor Kru B</div>
+              <svg width="76" height="56" viewBox="-38 -28 76 56" aria-hidden="true"><g id="mArrow"><path d="M-30 -9 H8 V-22 L32 0 L8 22 V9 H-30 Z" fill="currentColor"/></g></svg>
+              <div class="lbl" id="mLbl">Ke titik kumpul</div>
+              <div class="big num" id="mDist">40 m</div>
+              <div class="ppm num" id="mPpm">0,0 ppm</div>
+              <button id="mAck" disabled>ACK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <details class="sim" id="simPanel">
+        <summary>Panel simulasi: angin, kebocoran, gangguan</summary>
+        <div class="simgrid">
+          <label for="wdir">Angin dari <span id="wdirL" class="num"></span>
+            <input type="range" id="wdir" min="0" max="355" step="5" value="135"></label>
+          <label for="wspd">Kecepatan angin <span id="wspdL" class="num"></span>
+            <input type="range" id="wspd" min="0.3" max="8" step="0.1" value="2.2"></label>
+          <label class="toggle" for="leak"><input type="checkbox" id="leak" checked> Kebocoran di wellhead aktif</label>
+          <div style="display:grid;gap:6px">
+            <button class="btn small" id="bInterf">Simulasikan gangguan genset di dekat Kru A</button>
+            <span class="sub">Detektor Kru A membaca 6,5 ppm palsu selama 25 detik. Contoh false alarm yang ditindaklanjuti dengan murah.</span>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2 class="pill-h">KRU & GAS WATCHER</h2>
+        <div class="list" id="crews"></div>
+      </div>
+      <div class="card">
+        <h2 class="pill-h">IZIN KERJA</h2>
+        <div class="list" id="permits"></div>
+      </div>
+      <div class="card">
+        <h2 class="pill-h">PRA-KERJA</h2>
+        <div class="steps" id="pre"></div>
+      </div>
+      <div class="card">
+        <h2 class="pill-h">KRONOLOGI SHIFT</h2>
+        <div class="list" id="chrono"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREW DEVICE -->
+  <section id="v-dev" role="tabpanel" aria-labelledby="t-dev" hidden>
+    <div class="card">
+      <div class="crewpick" role="group" aria-label="Pilih kru">
+        <button class="tab" data-crew="A" aria-pressed="false">Kru A</button>
+        <button class="tab" data-crew="B" aria-pressed="true">Kru B</button>
+        <button class="tab" data-crew="C" aria-pressed="false">Kru C</button>
+      </div>
+      <div class="devgrid">
+        <div>
+          <div class="device" aria-label="Layar detektor kru">
+            <div class="strap" aria-hidden="true"></div>
+            <div class="screen aman" id="screen">
+              <div class="row2"><span id="dId">DET-B · Kru B</span><span class="vib" id="dVib">Getar: tidak</span></div>
+              <div class="st" id="dSt">AMAN</div>
+              <div class="rs" id="dRs">Tidak ada bahaya terdeteksi</div>
+              <div class="ppm num" id="dPpm">0,0<small>ppm H₂S</small></div>
+              <div class="arrowbox">
+                <svg viewBox="-50 -50 100 100" aria-hidden="true"><circle r="46" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="3"/><text y="-34" text-anchor="middle" font-size="11" fill="currentColor" font-family="Roboto Condensed">U</text><g id="dArrow"><path d="M0 -30 L16 4 L5 2 L5 30 L-5 30 L-5 2 L-16 4 Z" fill="currentColor"/></g></svg>
+                <div><div class="rs" id="dMusterL">Arah titik kumpul</div><div style="font:700 18px var(--f-label)" id="dMuster">TL · 120 m</div></div>
+              </div>
+              <div class="row2"><span id="dWind">Angin dari TG · 2,2 m/s</span><span id="dCount"></span></div>
+              <button class="ackbtn" id="dAck" disabled>ACK</button>
+            </div>
+            <div class="strap b" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="explain">
+          <h3>Yang dilihat dan dilakukan kru</h3>
+          <ul id="dExplain"></ul>
+          <h3>Status pendukung</h3>
+          <ul id="dSupport"></ul>
+          <p class="sub">Arah panah mengikuti utara peta. Saat kuning, panah menunjuk arah keluar dari jalur gas (tegak lurus arah angin). Saat evakuasi, panah menunjuk titik kumpul terdekat yang berada di luar arah gas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HSE -->
+  <section id="v-hse" role="tabpanel" aria-labelledby="t-hse" hidden>
+    <div class="col">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid">
+        <div class="card">
+          <h2 class="pill-h">LOG ALARM SHIFT INI</h2>
+          <div class="tbl"><table><thead><tr><th>Waktu</th><th>Kru</th><th>Tingkat</th><th>Pemicu</th><th>Kategori</th><th>ACK</th></tr></thead><tbody id="log"></tbody></table></div>
+        </div>
+        <div class="col">
+          <div class="card">
+            <h2 class="pill-h">STATUS DETEKTOR</h2>
+            <div class="tbl"><table><thead><tr><th>Detektor</th><th>Bump test</th><th>Alarm palsu</th><th>Tindakan</th></tr></thead><tbody id="dets"></tbody></table></div>
+          </div>
+          <div class="card">
+            <h2 class="pill-h">REKAP UNTUK BRIEFING</h2>
+            <p id="recap" style="margin:0;color:var(--ink)"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="card foot">
+    <div class="layers"><span class="L-tek">Teknologi: detektor, sensor, peta, alarm</span><span class="L-pro">Proses: pra-kerja, izin kerja, respons</span><span class="L-org">Organisasi: gas watcher, eskalasi</span><span class="L-man">Manusia: briefing, rekap alarm</span></div>
+    <div>Prototype konsep kelompok untuk tugas Rekayasa Kognitif. Peta udara digambar ulang (bukan citra satelit). Model sebaran gas, ambang (Kuning ≥ 5 ppm, Merah ≥ 10 ppm), kode izin kerja, dan semua angka adalah contoh ilustrasi, bukan data lapangan. Target beban alarm ±1 per 10 menit per orang mengikuti ISA-18.2.</div>
+  </div>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const CX=500, CY=320, K=8000, TH_Y=5, TH_R=10, CONE=30, ACK_WIN=30;
+const DIRS=["U","TL","T","TG","S","BD","B","BL"], DIRN=["Utara","Timur Laut","Timur","Tenggara","Selatan","Barat Daya","Barat","Barat Laut"];
+const dirName=b=>DIRS[Math.round(((b%360)+360)%360/45)%8];
+const $=id=>document.getElementById(id);
+const fmt=(n,d=1)=>n.toLocaleString("id-ID",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pt=(b,d)=>{const r=b*Math.PI/180;return{x:CX+d*Math.sin(r),y:CY-d*Math.cos(r)}};
+const bearingOf=(x,y,ox=CX,oy=CY)=>(Math.atan2(x-ox,-(y-oy))*180/Math.PI+360)%360;
+const adiff=(a,b)=>{let d=Math.abs(a-b)%360;return d>180?360-d:d};
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const LOW=[[565,440],[700,425],[735,505],[690,565],[590,560],[548,500]];
+const inLow=(x,y)=>{let c=false;for(let i=0,j=LOW.length-1;i<LOW.length;j=i++){const[xi,yi]=LOW[i],[xj,yj]=LOW[j];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c;}return c};
+const MUSTERS=[45,135,225,315].map(b=>({b,...pt(b,225),name:dirName(b)}));
+const SENS=[0,72,144,216,288].map((b,i)=>({id:"AS-"+(i+1),...pt(b,70),c:0}));
+const CREWS0=[
+  {id:"A",task:"Inspeksi jalur pipa",watcher:"Gas watcher A",b:70,d:140},
+  {id:"B",task:"Perbaikan flange",watcher:"Gas watcher B",b:225,d:150},
+  {id:"C",task:"Penggantian katup",watcher:"Gas watcher C",b:250,d:160}];
+
+let S;
+function fresh(){
+  S={t:0,running:false,speed:+$("speed").value,wind:{from:135,u:2.2},windTarget:null,leak:true,
+    ref:135,devStart:null,windChangeAt:null,lastInfo:null,alerts:[],chrono:[],stops:0,interf:null,scenario:null,dev:"B",focus:null,showSensors:true,
+    view:{cx:500,cy:320,z:1},
+    pre:{dock:false,brief:false,wind:""},
+    crews:CREWS0.map(c=>({id:c.id,task:c.task,watcher:c.watcher,...pt(c.b,c.d),c:0,tgt:0,tau:20,level:"aman",reason:"",mode:"Bekerja",move:null})),
+    sensors:SENS.map(s=>({...s,c:0})),
+    permits:[{id:"PTW-0418",crew:"A",job:"Inspeksi jalur pipa",status:"Aktif",msg:""},{id:"PTW-0412",crew:"B",job:"Perbaikan flange",status:"Aktif",msg:""},{id:"PTW-0415",crew:"C",job:"Penggantian katup",status:"Aktif",msg:""}],
+    dets:{A:{fa:0},B:{fa:0},C:{fa:0}},nid:1};
+  for(const p of [...S.crews,...S.sensors]){p.c=p.tgt=concAt(p.x,p.y)}
+}
+const clock=()=>{const s=8*3600+30*60+Math.floor(S.t);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(x).padStart(2,"0")}`};
+const plumeDir=()=>(S.wind.from+180)%360;
+const zoneLen=()=>Math.min(420,150+30*S.wind.u);
+
+/* ---------- gas & zone model (illustrative) ---------- */
+function concAt(x,y){
+  if(!S.leak)return 0;
+  const u=S.wind.u,dx=x-CX,dy=y-CY,r=Math.hypot(dx,dy);let c;
+  if(u>=1){const rad=plumeDir()*Math.PI/180,ex=Math.sin(rad),ey=-Math.cos(rad);
+    const xd=dx*ex+dy*ey,yc=Math.abs(-dx*ey+dy*ex);
+    if(xd<=0)c=K/(u*(r+10))*Math.exp(-r*r/450);
+    else{const sg=0.3*xd+5;c=K/(u*(xd+10))*Math.exp(-yc*yc/(2*sg*sg));}}
+  else{c=K/(r+10)*0.35;if(inLow(x,y))c*=1.6;}
+  return Math.min(c,300);
+}
+const leakDetected=()=>S.sensors.some(s=>s.c>0.5);
+function inZoneRaw(x,y){const r=Math.hypot(x-CX,y-CY);
+  if(S.wind.u>=1)return r<=25||(r<=zoneLen()&&adiff(bearingOf(x,y),plumeDir())<=CONE);
+  return r<=130||inLow(x,y);}
+const inZone=(x,y)=>leakDetected()&&inZoneRaw(x,y);
+const safeMuster=m=>S.wind.u>=1?adiff(m.b,plumeDir())>=75:!inZoneRaw(m.x,m.y);
+function musterFor(p){const ok=MUSTERS.filter(safeMuster),pool=ok.length?ok:MUSTERS;return pool.reduce((a,m)=>dist(p,m)<dist(p,a)?m:a,pool[0]);}
+const upwindMuster=()=>MUSTERS.reduce((a,m)=>adiff(m.b,S.wind.from)<adiff(a.b,S.wind.from)?m:a,MUSTERS[0]);
+function escapePt(c){ // crosswind exit from the hazard zone (radial when wind is weak)
+  const dx=c.x-CX,dy=c.y-CY,r=Math.hypot(dx,dy)||1;let tx,ty;
+  if(S.wind.u<1){const need=Math.max(0,150-r)+30;tx=c.x+dx/r*need;ty=c.y+dy/r*need;}
+  else{const rad=plumeDir()*Math.PI/180,ex=Math.sin(rad),ey=-Math.cos(rad),nx=-ey,ny=ex;
+    const xd=dx*ex+dy*ey,cr=dx*nx+dy*ny,m=musterFor(c);
+    let side=Math.sign(cr);if(Math.abs(cr)<5)side=Math.sign((m.x-c.x)*nx+(m.y-c.y)*ny)||1;
+    const need=Math.max(0,0.577*Math.max(xd,0)+30-Math.abs(cr))+10;tx=c.x+nx*side*need;ty=c.y+ny*side*need;}
+  return{x:Math.max(15,Math.min(985,tx)),y:Math.max(15,Math.min(625,ty))};}
+function escapeStep(c){const m=musterFor(c),d=dist(c,m)||1,s=Math.min(30,d);return{x:c.x+(m.x-c.x)/d*s,y:c.y+(m.y-c.y)/d*s};}
+function route(c,mode){const m=musterFor(c),pts=[];if(inZoneRaw(c.x,c.y))pts.push(escapePt(c));if(mode==="evakuasi")pts.push(m);return{pts,mode,name:m.name};}
+const reading=c=>c.c+(S.interf&&S.interf.crew===c.id?S.interf.amp:0);
+function confirmed(c){return S.sensors.some(s=>s.c>=TH_Y&&dist(s,c)<=60)||S.crews.some(o=>o!==c&&reading(o)>=TH_Y&&dist(o,c)<=40);}
+const openAlert=id=>S.alerts.find(a=>a.crew===id&&!a.end);
+const crew=id=>S.crews.find(c=>c.id===id);
+const permitOf=id=>S.permits.find(p=>p.crew===id);
+function say(tag,text){S.chrono.unshift({t:clock(),tag,text});S.chrono=S.chrono.slice(0,40);$("narrTag").textContent=tag;$("narr").textContent=text;}
+function eta(c){if(c.tgt<=TH_R||c.c>=TH_R)return null;return -c.tau*Math.log((c.tgt-TH_R)/(c.tgt-c.c));}
+const etaTxt=s=>s==null?"":s>=60?`±${Math.round(s/60)} menit`:`±${Math.max(1,Math.round(s))} detik`;
+function focusCrew(){if(S.focus)return crew(S.focus);
+  const open=S.alerts.filter(a=>!a.end).sort((a,b)=>(b.level==="merah")-(a.level==="merah")||(eta(crew(a.crew))??1e9)-(eta(crew(b.crew))??1e9));
+  return open.length?crew(open[0].crew):crew("B");}
+
+/* ---------- actions ---------- */
+function ack(id,by){
+  const a=openAlert(id),c=crew(id);if(!a||a.ack)return;
+  a.ack=true;a.ackSec=Math.round(S.t-a.t0);
+  if(a.level==="kuning"){c.move=route(c,"geser");if(!c.move.pts.length)c.move.pts.push(escapeStep(c));c.mode="Bergeser keluar dari jalur gas";}
+  say("ACK",`Kru ${id} menekan ACK dalam ${a.ackSec} detik${by?" "+by:""} dan bergeser menjauhi arah gas.`);
+}
+function evac(id){
+  const c=crew(id),a=openAlert(id);c.move=route(c,"evakuasi");c.mode="Evakuasi ke titik kumpul";
+  if(a){a.order=true;if(!a.ack){a.ack=true;a.ackSec=Math.round(S.t-a.t0);}}
+  say("Evakuasi",`Supervisor mengirim perintah evakuasi ke Kru ${id}. Kru menuju titik kumpul ${c.move.name}.`);
+}
+function reeval(pid){
+  const p=S.permits.find(x=>x.id===pid),c=crew(p.crew);
+  if(c.level!=="aman"){p.msg="Belum bisa: kru masih dalam status peringatan.";return;}
+  if(!S.pre.wind){p.msg="Konfirmasi dulu arah angin manual (windsock) di Pra-kerja.";return;}
+  const d=adiff(DIRS.indexOf(S.pre.wind)*45,S.wind.from);
+  if(d>45){p.msg=`Arah angin manual (${S.pre.wind}) berbeda ${Math.round(d)}° dari sensor (${dirName(S.wind.from)}). Perbarui konfirmasi windsock di Pra-kerja.`;return;}
+  p.status="Aktif";p.msg="";c.mode="Bekerja";
+  say("Izin",`Izin ${p.id} dievaluasi ulang: angin terkonfirmasi manual (${S.pre.wind}), kru aman. Pekerjaan dilanjutkan.`);
+}
+function startInterf(){S.interf={crew:"A",until:S.t+25,amp:6.5};say("Gangguan","Genset lewat di dekat Kru A. Detektor A membaca 6,5 ppm, tetapi tidak ada sensor lain yang mengonfirmasi.");}
+
+/* ---------- simulation ---------- */
+function tick(dt){
+  S.t+=dt;
+  if(S.scenario)scenarioStep();
+  if(S.interf&&S.t>=S.interf.until)S.interf=null;
+  if(S.windTarget!=null){let d=((S.windTarget-S.wind.from+540)%360)-180;const st=3*dt;
+    if(Math.abs(d)<=st){S.wind.from=S.windTarget;S.windTarget=null;}else S.wind.from=(S.wind.from+Math.sign(d)*st+360)%360;
+    $("wdir").value=Math.round(S.wind.from/5)*5;}
+  const u=Math.max(S.wind.u,0.5);
+  for(const p of [...S.sensors,...S.crews]){
+    p.tgt=concAt(p.x,p.y);const r=Math.hypot(p.x-CX,p.y-CY);
+    p.tau=p.tgt>=p.c?Math.max(15,r/(0.4*u)):20; // gas arrives slowly, clears quickly once out of the plume
+    p.c+=(p.tgt-p.c)*(1-Math.exp(-dt/p.tau));}
+  for(const c of S.crews){
+    if(!c.move)continue;let left=2*dt;
+    while(left>0&&c.move.pts.length){const g=c.move.pts[0],d=dist(c,g);
+      if(d<=left){c.x=g.x;c.y=g.y;left-=d;c.move.pts.shift();}else{c.x+=(g.x-c.x)/d*left;c.y+=(g.y-c.y)/d*left;left=0;}}
+    if(!c.move.pts.length){c.mode=c.move.mode==="evakuasi"?"Di titik kumpul":"Aman, di luar jalur gas";c.move=null;}
+  }
+  // a crew that already acknowledged keeps stepping out if the plume swings onto them again
+  for(const c of S.crews){const a=openAlert(c.id);
+    if(a&&a.ack&&a.level==="kuning"&&!c.move&&inZoneRaw(c.x,c.y)){c.move=route(c,"geser");c.mode="Bergeser keluar dari jalur gas";}}
+  for(const c of S.crews)evalCrew(c);
+  for(const a of S.alerts){if(a.end||a.ack||a.level!=="kuning")continue;const el=S.t-a.t0;
+    if(el>=ACK_WIN&&a.esc<1){a.esc=1;say("Eskalasi",`Kru ${a.crew} belum ACK dalam 30 detik. Notifikasi diteruskan ke ${crew(a.crew).watcher}.`);}
+    if(el>=2*ACK_WIN&&a.esc<2){a.esc=2;say("Eskalasi",`Kru ${a.crew} masih belum ACK. Notifikasi diteruskan ke supervisor.`);}}
+  // wind change detection: shift > 30° that holds for 60 s
+  if(adiff(S.wind.from,S.ref)>30){if(S.devStart==null){S.devStart=S.t;S.windChangeAt=S.t;}
+    if(S.t-S.devStart>=60){S.ref=S.wind.from;S.devStart=null;S.lastInfo=S.t;
+      const hit=[];for(const c of S.crews){if(inZone(c.x,c.y)||openAlert(c.id)){const p=permitOf(c.id);if(p.status==="Aktif"){p.status="Perlu evaluasi ulang";hit.push(p.id);}}}
+      say("Info angin",`Arah angin berubah dan bertahan 60 detik: sekarang dari ${DIRN[DIRS.indexOf(dirName(S.wind.from))]}. Titik kumpul hulu angin: ${upwindMuster().name}.${hit.length?" Izin "+hit.join(", ")+" perlu evaluasi ulang.":""}`);}}
+  else S.devStart=null;
+}
+function evalCrew(c){
+  const r=reading(c),cf=confirmed(c),z=inZone(c.x,c.y);let lv="aman",rs="";
+  if(r>=TH_R){lv="merah";rs="≥ 10 ppm";}
+  else if(r>=TH_Y&&cf){lv="merah";rs="≥ 5 ppm terkonfirmasi sumber kedua";}
+  else if(r>=TH_Y){lv="kuning";rs="≥ 5 ppm belum terkonfirmasi";}
+  else if(z){lv="kuning";rs="Masuk area bahaya (hitungan angin)";}
+  let a=openAlert(c.id);
+  if(a)a.maxReal=Math.max(a.maxReal,c.c);
+  if(lv==="merah"&&c.level!=="merah"){
+    if(!a){a=newAlert(c,"merah",rs);}else{a.level="merah";a.reason=rs;}
+    a.ack=true;a.ackSec=a.ackSec??Math.round(S.t-a.t0);
+    if(!c.move||c.move.mode!=="evakuasi"){c.move=route(c,"evakuasi");c.mode="Evakuasi + SCBA";}
+    const p=permitOf(c.id);if(p.status!=="Dihentikan"){p.status="Dihentikan";S.stops++;}
+    say("Merah",`Detektor Kru ${c.id} ${rs}. Alarm MERAH: evakuasi + SCBA, izin ${p.id} dihentikan dan wajib dievaluasi ulang.`);
+    c.level="merah";c.reason=rs;return;}
+  if(lv==="kuning"&&c.level==="aman"){
+    newAlert(c,"kuning",rs);c.level="kuning";c.reason=rs;
+    say("Kuning",`Kru ${c.id}: ${rs}. Pra-peringatan KUNING dikirim ke detektor Kru ${c.id}${rs.startsWith("Masuk")?", sebelum gas sampai":""}.`);return;}
+  if(lv==="kuning"&&c.level==="kuning"&&a&&a.reason!==rs&&!rs.startsWith("Masuk")){a.reason=rs;c.reason=rs;}
+  if(lv==="aman"&&c.level!=="aman"&&r<4&&!z){
+    if(a){a.end=S.t;a.cat=a.maxReal>=TH_Y?"Asli":a.firstReason.startsWith("Masuk")?"Pra-peringatan":"Palsu (gangguan)";
+      if(a.cat==="Palsu (gangguan)")S.dets[c.id].fa++;}
+    c.level="aman";c.reason="";
+    if(c.mode.startsWith("Bergeser"))c.mode="Aman, di luar jalur gas";}
+}
+function newAlert(c,level,reason){const a={id:S.nid++,crew:c.id,level,reason,firstReason:reason,t0:S.t,clock:clock(),ack:false,ackSec:null,esc:0,end:null,maxReal:c.c,cat:""};S.alerts.push(a);return a;}
+
+/* ---------- scenario: replay of Kasus D with PlumeGuard active ---------- */
+const SC=[
+  [0,()=>{S.pre={dock:true,brief:true,wind:"TG"};say("Pra-kerja","Dock: 12/12 detektor lulus bump test. Briefing: angin dari Tenggara, titik kumpul TG, pasangan buddy per kru. Izin terbit dengan konfirmasi angin manual.");}],
+  [15,()=>say("Kerja","Shift berjalan. Ada kebocoran kecil di wellhead, tetapi gas terbawa ke barat laut, menjauhi ketiga kru.")],
+  [40,()=>startInterf()],
+  [80,()=>{S.windTarget=45;S.windChangeAt=S.t;say("Angin","Angin mulai berputar dari Tenggara ke Timur Laut. Arah gas bergeser ke barat daya, ke arah Kru B dan Kru C.");}],
+  [270,()=>{const red=S.alerts.some(a=>a.level==="merah");
+    say("Selesai",red?"Skenario selesai. Ada kru yang mencapai alarm merah, sehingga evakuasi + SCBA dijalankan dan izinnya dihentikan. Lihat tab HSE untuk rekap.":"Skenario selesai. Semua kru keluar dari jalur gas sebelum detektornya mencapai 10 ppm. Lihat tab HSE untuk rekap, atau evaluasi ulang izin di panel Izin kerja.");
+    S.scenario=null;S.running=false;syncPause();}]];
+function scenarioStep(){
+  const el=S.t-S.scenario.t0;
+  while(S.scenario&&S.scenario.i<SC.length&&el>=SC[S.scenario.i][0]){SC[S.scenario.i][1]();if(S.scenario)S.scenario.i++;}
+  if(!S.scenario)return;
+  for(const a of S.alerts){if(a.end||a.ack)continue;const e=S.t-a.t0;
+    if(a.crew==="A"&&e>=6)ack("A","(false alarm tetap ditindaklanjuti dengan murah)");
+    if(a.crew==="C"&&e>=6)ack("C","");
+    if(a.crew==="B"&&a.esc>=1&&e>=36)ack("B","setelah dipanggil gas watcher lewat radio");}
+}
+
+/* ---------- aerial map ---------- */
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function pill(parent,x,y,lines,opt={}){ // white label chip used for map annotations
+  const g=el("g",{transform:`translate(${x} ${y})`},parent);const fs=opt.fs||14;
+  const w=Math.max(...lines.map((l,i)=>l.length*(i?6.6:7.8)))+18,h=lines.length>1?38:24;
+  el("rect",{x:0,y:-h/2,width:w,height:h,rx:6,fill:opt.fill||"#FFFFFF",stroke:opt.stroke||"rgba(0,0,0,.25)","stroke-width":1},g);
+  const ts=lines.map((l,i)=>{const t=el("text",{x:9,y:lines.length>1?(i?13:-3):5,"font-size":i?11.5:fs,"font-weight":i?500:700,fill:opt.color||(i?"#4A5568":"#1B2433")},g);t.textContent=l;return t;});
+  return{g,ts,rect:g.firstChild};}
+const M={};
+function buildMap(){
+  const svg=$("map");svg.innerHTML="";
+  const defs=el("defs",{},svg);
+  const rg=el("radialGradient",{id:"plumeG",gradientUnits:"userSpaceOnUse",cx:CX,cy:CY,r:300},defs);M.plumeG=rg;
+  [[0,"#E3241B",.82],[.45,"#E3241B",.55],[.8,"#E3241B",.25],[1,"#E3241B",.08]].forEach(([o,c,a])=>el("stop",{offset:o,"stop-color":c,"stop-opacity":a},rg));
+  const tg=el("radialGradient",{id:"tankG",cx:.38,cy:.35,r:.75},defs);
+  [[0,"#FBFBF8"],[.55,"#D3D2CB"],[1,"#8F8E87"]].forEach(([o,c])=>el("stop",{offset:o,"stop-color":c},tg));
+  // ground
+  el("rect",{x:0,y:0,width:1000,height:640,fill:"#7D8068"},svg);
+  [["M0 0 H260 L210 140 L0 190 Z","#6E7A58"],["M760 300 L1000 260 V420 L820 430 Z","#8A8770"],["M0 560 L240 520 L300 640 H0 Z","#64744F"],["M820 0 H1000 V70 L900 60 Z","#6C7955"]].forEach(([d,f])=>el("path",{d,fill:f},svg));
+  [[60,60,38],[120,40,30],[40,130,34],[150,110,26],[60,600,40],[140,590,30],[930,30,28],[960,360,30]].forEach(([x,y,r])=>el("circle",{cx:x,cy:y,r,fill:"#4F6440",opacity:.85},svg));
+  // roads
+  [["M0 520 C200 500 400 515 1000 495",20],["M270 640 L285 0",18],["M285 250 C420 245 560 230 1000 220",14]].forEach(([d,w])=>{el("path",{d,stroke:"#8F8C80","stroke-width":w+4,fill:"none"},svg);el("path",{d,stroke:"#BDB9AC","stroke-width":w,fill:"none"},svg);});
+  // well pad
+  el("rect",{x:335,y:175,width:330,height:290,rx:6,fill:"#A6A498",stroke:"#8B897E","stroke-width":3},svg);
+  // low area
+  M.low=el("polygon",{points:LOW.map(p=>p.join(",")).join(" "),fill:"rgba(70,130,190,.28)",stroke:"#5C9BD6","stroke-dasharray":"6 5","stroke-width":2},svg);
+  M.lowT=el("text",{x:598,y:528,"font-size":12,fill:"#EAF2FA","font-weight":700},svg);M.lowT.textContent="Area rendah";
+  // pipe racks
+  const rack=(d)=>{el("path",{d,stroke:"#5E5D57","stroke-width":9,fill:"none","stroke-linecap":"round"},svg);el("path",{d,stroke:"#D9D6CC","stroke-width":5,fill:"none","stroke-linecap":"round"},svg);};
+  ["M500 320 H700 V140 H760","M500 320 V200 H620","M700 320 V520 H800","M500 320 L360 440","M360 440 H300","M700 230 H900"].forEach(rack);
+  // tanks
+  [[760,120,30],[835,108,25],[815,195,30],[900,175,24],[800,570,32],[880,550,27],[940,605,20]].forEach(([x,y,r])=>{
+    el("circle",{cx:x+4,cy:y+5,r,fill:"rgba(0,0,0,.28)"},svg);el("circle",{cx:x,cy:y,r,fill:"url(#tankG)",stroke:"#77766F","stroke-width":2},svg);el("circle",{cx:x,cy:y,r:r*.35,fill:"none",stroke:"#9C9B94","stroke-width":1.5},svg);});
+  // buildings
+  [[80,395,120,58],[225,405,40,46],[95,470,90,40],[560,45,110,42],[395,555,90,44],[905,440,70,46],[40,250,70,50]].forEach(([x,y,w,h])=>{
+    el("rect",{x:x+5,y:y+6,width:w,height:h,fill:"rgba(0,0,0,.28)"},svg);el("rect",{x,y,width:w,height:h,fill:"#CFCDC4",stroke:"#8E8C84"},svg);el("line",{x1:x,y1:y+h/2,x2:x+w,y2:y+h/2,stroke:"#B6B4AB"},svg);});
+  // equipment skids on the pad
+  [[560,350,26,18],[600,250,30,20],[420,240,24,24],[430,380,30,18],[620,410,22,22]].forEach(([x,y,w,h])=>el("rect",{x,y,width:w,height:h,fill:"#E7E3D6",stroke:"#7E7B71"},svg));
+  // dynamic layers
+  M.zone=el("path",{fill:"url(#plumeG)",stroke:"rgba(227,36,27,.55)","stroke-width":1.5,"stroke-dasharray":"8 6"},svg);
+  M.sens=S.sensors.map(s=>{const g=el("g",{},svg);el("rect",{x:s.x-7,y:s.y-7,width:14,height:14,rx:3,fill:"#145AA8",stroke:"#fff","stroke-width":2},g);
+    const p=pill(g,s.x+11,s.y-15,["AS · 0,0"],{fs:11});return{g,p};});
+  M.mus=MUSTERS.map(m=>{const g=el("g",{},svg);el("line",{x1:m.x,y1:m.y+12,x2:m.x,y2:m.y-20,stroke:"#F2F2F2","stroke-width":3},g);
+    const f=el("path",{d:`M${m.x+1} ${m.y-20} l22 7 l-22 7 z`},g);const p=pill(g,m.x-46,m.y+30,["Titik kumpul "+m.name],{fs:12.5});return{g,f,p};});
+  // leak source
+  const src=el("g",{},svg);el("path",{d:`M${CX} ${CY-22} L${CX+20} ${CY+12} L${CX-20} ${CY+12} Z`,fill:"#D7261E",stroke:"#fff","stroke-width":3,"stroke-linejoin":"round"},src);
+  el("rect",{x:CX-2,y:CY-11,width:4,height:12,fill:"#fff"},src);el("rect",{x:CX-2,y:CY+4,width:4,height:4,fill:"#fff"},src);
+  pill(src,CX-52,CY+34,["Sumber bocor"],{fill:"#D7261E",stroke:"#fff",color:"#FFFFFF",fs:13});
+  // crews
+  M.crews=S.crews.map(c=>{const g=el("g",{"data-crew":c.id,style:"cursor:grab"},svg);
+    const ring=el("circle",{r:17,fill:"none","stroke-width":3},g);const dot=el("circle",{r:11,stroke:"#fff","stroke-width":3.5},g);
+    const p=pill(g,18,0,["Kru "+c.id,"0,0 ppm"]);return{g,ring,dot,p};});
+}
+const LVC={aman:"#2E9E4F",kuning:"#F2B705",merah:"#D7261E"};
+function setPill(p,lines){lines.forEach((l,i)=>p.ts[i].textContent=l);const w=Math.max(...lines.map((l,i)=>l.length*(i?6.6:7.8)))+18;p.rect.setAttribute("width",w);}
+function applyView(){const v=S.view,w=1000/v.z,h=640/v.z;
+  const x=Math.max(0,Math.min(1000-w,v.cx-w/2)),y=Math.max(0,Math.min(640-h,v.cy-h/2));
+  $("map").setAttribute("viewBox",`${x.toFixed(1)} ${y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);}
+function renderMap(){
+  const pd=plumeDir(),L=zoneLen();
+  M.plumeG.setAttribute("r",S.wind.u>=1?L:150);
+  if(!leakDetected())M.zone.setAttribute("d","");
+  else if(S.wind.u>=1){const a=pt(pd-CONE,L),b=pt(pd+CONE,L);M.zone.setAttribute("d",`M${CX} ${CY} L${a.x.toFixed(1)} ${a.y.toFixed(1)} A${L} ${L} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)} Z`);}
+  else M.zone.setAttribute("d",`M${CX-130} ${CY} a130 130 0 1 0 260 0 a130 130 0 1 0 -260 0 Z`);
+  const weak=S.wind.u<1;
+  M.low.setAttribute("visibility",S.showSensors||weak?"visible":"hidden");M.lowT.setAttribute("visibility",S.showSensors||weak?"visible":"hidden");
+  M.low.setAttribute("fill",weak&&leakDetected()?"rgba(227,36,27,.35)":"rgba(70,130,190,.28)");
+  MUSTERS.forEach((m,i)=>{const ok=safeMuster(m);M.mus[i].f.setAttribute("fill",ok?"#22A04B":"#9AA0A6");M.mus[i].p.g.setAttribute("visibility",ok?"visible":"hidden");M.mus[i].g.setAttribute("opacity",ok?1:.7);});
+  S.sensors.forEach((s,i)=>{M.sens[i].g.setAttribute("visibility",S.showSensors?"visible":"hidden");setPill(M.sens[i].p,[`${s.id} · ${fmt(s.c)}`]);});
+  const fc=focusCrew();
+  S.crews.forEach((c,i)=>{const m=M.crews[i];m.g.setAttribute("transform",`translate(${c.x.toFixed(1)} ${c.y.toFixed(1)})`);
+    m.dot.setAttribute("fill",LVC[c.level]);
+    m.ring.setAttribute("stroke",c===fc?"#FFFFFF":"transparent");m.ring.setAttribute("stroke-dasharray",c.move?"5 4":"");
+    setPill(m.p,["Kru "+c.id,`${fmt(reading(c))} ppm`]);});
+  // wind badge
+  $("wbArrow").setAttribute("transform",`rotate(${(pd-90).toFixed(0)})`);
+  const changing=S.windTarget!=null||S.devStart!=null||(S.lastInfo!=null&&S.t-S.lastInfo<180);
+  $("wbBox").className="box"+(changing?" chg":"");
+  if(changing){const since=Math.max(0,S.t-(S.windChangeAt??S.t));
+    $("wb1").textContent="Angin berubah";$("wb2").textContent=`${since<60?"baru saja":Math.floor(since/60)+" mnt lalu"} · ${fmt(S.wind.u)} m/s`;}
+  else{$("wb1").textContent=`Angin dari ${dirName(S.wind.from)}${S.wind.u<1?" · lemah":""}`;$("wb2").textContent=`${fmt(S.wind.u)} m/s`;}
+  // scale bar: 50 m in rendered pixels
+  const px=$("map").getBoundingClientRect().width/(1000/S.view.z)*50;
+  $("sbLine").style.width=Math.max(20,px).toFixed(0)+"px";
+  $("sbTime").textContent=clock().slice(0,5);
+  $("liveDot").style.background=S.running?"#3CC35E":"#9AA0A6";$("liveTxt").textContent=S.running?"Data langsung":"Dijeda";
+}
+
+/* ---------- tablet cards & mini detector ---------- */
+const cache=new WeakMap();
+function setHTML(node,html){if(cache.get(node)!==html){node.innerHTML=html;cache.set(node,html);}}
+const ICON={
+  warn:`<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm-1 7h2v6h-2V9Zm0 8h2v2h-2v-2Z" fill="currentColor"/></svg>`,
+  doc:`<svg width="18" height="20" viewBox="0 0 20 24" aria-hidden="true"><path d="M2 1h11l5 5v17H2V1Zm10 1.5V7h4.5M5 11h10M5 15h10M5 19h7" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+  ok:`<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`,
+  run:`<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="3.5" r="2.5" fill="currentColor"/><path d="M8 22l3-7 3 3v4M6 11l3-4 5 2 3 4M11 15l-1-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chev:`<svg class="chev" width="10" height="16" viewBox="0 0 10 16" aria-hidden="true"><path d="m2 2 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>`};
+function renderCards(){
+  const cards=[];
+  const open=S.alerts.filter(a=>!a.end).sort((a,b)=>(b.level==="merah")-(a.level==="merah")||(eta(crew(a.crew))??1e9)-(eta(crew(b.crew))??1e9)||a.t0-b.t0);
+  for(const a of open){const c=crew(a.crew),e=eta(c),z=inZoneRaw(c.x,c.y),evacing=c.move&&c.move.mode==="evakuasi";
+    if(a.level==="merah")cards.push({cls:"red",ic:"warn",crew:c.id,t:`KRU ${c.id} ALARM MERAH · ${a.reason}`,s:"Evakuasi + SCBA berjalan. Izin kerja dihentikan.",key:`m${a.id}`});
+    else if(z&&e!=null)cards.push({cls:"red",ic:"warn",crew:c.id,t:`KRU ${c.id} DI AREA BAHAYA · ETA <span data-eta="${c.id}"></span>`,s:a.ack?(evacing?"Perintah evakuasi terkirim, kru menuju titik kumpul.":"Sudah ACK, kru bergeser keluar dari jalur gas."):"Terkena plume H₂S berdasarkan arah angin terbaru. Belum ACK.",act:evacing?"":`<button class="tact red" data-evac="${c.id}">${ICON.run}Perintah evakuasi</button>`,key:`r${a.id}${a.ack}${evacing}`});
+    else cards.push({cls:"yellow",ic:"warn",crew:c.id,t:a.ack?`Kru ${c.id} sudah ACK (${a.ackSec} dtk)`:`Kru ${c.id} menunggu ACK <span data-cd="${a.id}"></span>`,s:a.ack?`${a.reason}. ${c.mode}.`:`${a.reason}. ${a.esc===2?"Sudah dieskalasi ke supervisor.":a.esc===1?"Sudah dieskalasi ke gas watcher.":"Pastikan kru mengonfirmasi instruksi."}`,key:`y${a.id}${a.ack}${a.esc}${a.reason}${c.mode}`});}
+  for(const p of S.permits)if(p.status!=="Aktif")cards.push({cls:"blue",ic:"doc",t:`Izin ${p.id}: ${p.status==="Dihentikan"?"dihentikan":"perlu evaluasi ulang"}`,s:p.msg||(p.status==="Dihentikan"?"Dihentikan oleh alarm merah. Evaluasi ulang sebelum dilanjutkan.":"Kondisi berubah akibat potensi paparan H₂S."),act:`<button class="tact navy" data-reeval="${p.id}">Evaluasi ulang</button>`,key:`p${p.id}${p.status}${p.msg}`});
+  if(!cards.length)cards.push({cls:"green",ic:"ok",t:"Semua kru aman",s:"Tidak ada peringatan aktif. Sistem memantau angin, gas, dan posisi kru.",key:"g"});
+  const shown=cards.slice(0,3);
+  setHTML($("tcards"),shown.map(k=>`<div class="tcard ${k.cls}" ${k.crew?`data-focus="${k.crew}" role="button" tabindex="0"`:""}><span class="ic">${ICON[k.ic]}</span><div style="min-width:0"><div class="tt">${k.t}</div><div class="ss">${k.s}</div></div>${k.act||"<span></span>"}${ICON.chev}</div>`).join("")+(cards.length>3?`<div class="more">+${cards.length-3} peringatan lain di panel kanan</div>`:""));
+  $("tcards").querySelectorAll("[data-eta]").forEach(n=>n.textContent=etaTxt(eta(crew(n.dataset.eta))));
+  $("tcards").querySelectorAll("[data-cd]").forEach(n=>{const a=S.alerts.find(x=>x.id==n.dataset.cd);if(!a)return;const lim=a.esc===0?ACK_WIN:a.esc===1?2*ACK_WIN:null;n.textContent=lim==null?"":`${Math.max(0,Math.ceil(lim-(S.t-a.t0)))} dtk`;});
+}
+function renderMini(){
+  const c=focusCrew(),a=openAlert(c.id),lv=c.level;
+  const esc=lv==="kuning"&&inZoneRaw(c.x,c.y),tgt=esc?escapePt(c):musterFor(c);
+  $("mini").className="mini "+lv;
+  $("mH").innerHTML=(lv==="aman"?ICON.ok:ICON.warn)+(lv==="aman"?"AMAN":lv==="kuning"?"WASPADA":"EVAKUASI");
+  $("mWho").textContent=`Detektor Kru ${c.id}`;
+  $("mArrow").setAttribute("transform",`rotate(${(bearingOf(tgt.x,tgt.y,c.x,c.y)-90).toFixed(0)})`);
+  $("mLbl").textContent=esc?"Keluar dari jalur gas":"Ke titik kumpul";
+  $("mDist").textContent=`${Math.round(dist(c,tgt))} m`;
+  $("mPpm").textContent=`${fmt(reading(c))} ppm H₂S`;
+  $("mAck").disabled=!(a&&!a.ack);$("mAck").textContent=a&&a.ack?`ACK (${a.ackSec} dtk)`:"ACK";
+}
+
+/* ---------- side panels ---------- */
+function renderCrews(){
+  setHTML($("crews"),S.crews.map(c=>`<div class="row"><div class="l1"><b>Kru ${c.id}</b><span class="chip c-${c.level}">${c.level}</span><span class="meta">${c.task}</span></div>
+    <div class="l1"><span class="crew-ppm num" data-ppm="${c.id}"></span><span class="meta" data-mode="${c.id}"></span></div><div class="meta">${c.watcher} · buddy dalam kru</div></div>`).join(""));
+  S.crews.forEach(c=>{$("crews").querySelector(`[data-ppm="${c.id}"]`).textContent=`${fmt(reading(c))} ppm`;$("crews").querySelector(`[data-mode="${c.id}"]`).textContent=c.mode;});
+}
+function renderPermits(){
+  setHTML($("permits"),S.permits.map(p=>{const cls=p.status==="Aktif"?"c-aman":p.status==="Dihentikan"?"c-merah":"c-warn";
+    return`<div class="row"><div class="l1"><b>${p.id}</b><span class="chip ${cls}">${p.status}</span><span class="meta">Kru ${p.crew} · ${p.job}</span></div>
+    ${p.status==="Aktif"?"":`<div class="acts"><button class="btn small" data-reeval="${p.id}">Evaluasi ulang & lanjutkan</button></div>`}${p.msg?`<div class="meta" style="color:var(--warn)">${p.msg}</div>`:""}</div>`}).join(""));
+}
+function renderPre(){
+  const d=S.pre.wind?adiff(DIRS.indexOf(S.pre.wind)*45,S.wind.from):null;
+  setHTML($("pre"),`
+  <div class="step ${S.pre.dock?"done":""}"><div class="n">1</div><div><b>Cek detektor di dock</b><p class="sub">${S.pre.dock?"12/12 lulus bump test. DET-07 gagal, terkunci di dock dan diganti DET-12 (contoh).":"Detektor yang belum lulus bump test hari ini tidak bisa diambil."}</p>${S.pre.dock?"":`<button class="btn small" data-pre="dock" style="margin-top:6px">Jalankan bump test</button>`}</div></div>
+  <div class="step ${S.pre.brief?"done":""}"><div class="n">2</div><div><b>Briefing pra-kerja</b><p class="sub">${S.pre.brief?`Angin, titik kumpul ${upwindMuster().name}, pasangan buddy, dan rekap alarm kemarin sudah disampaikan.`:"Arah angin, titik kumpul, pasangan buddy, rekap alarm kemarin. Maksimal 10 menit."}</p>${S.pre.brief?"":`<button class="btn small" data-pre="brief" style="margin-top:6px">Tandai briefing selesai</button>`}</div></div>
+  <div class="step ${S.pre.wind?"done":""}"><div class="n">3</div><div><b>Konfirmasi arah angin manual</b><p class="sub">Supervisor membaca windsock sendiri sebelum izin terbit, supaya tetap terlibat walau sistem memantau otomatis.</p>
+    <select id="preWind" aria-label="Arah angin menurut windsock"><option value="">Pilih arah dari windsock</option>${DIRS.map((x,i)=>`<option value="${x}" ${S.pre.wind===x?"selected":""}>Dari ${DIRN[i]} (${x})</option>`).join("")}</select>
+    ${d==null?"":`<p class="sub" style="color:${d>45?"var(--warn)":"var(--ok)"}">${d>45?`Berbeda ${Math.round(d)}° dari sensor (${dirName(S.wind.from)})`:"Sesuai dengan sensor angin"}</p>`}</div></div>`);
+}
+function renderChrono(){setHTML($("chrono"),S.chrono.length?S.chrono.slice(0,8).map(e=>`<div class="row"><div class="l1"><span class="chip c-info">${e.tag}</span><span class="meta num">${e.t}</span></div><div>${e.text}</div></div>`).join(""):`<div class="empty">Kejadian shift akan tercatat di sini.</div>`);}
+
+/* ---------- crew device view ---------- */
+function renderDevice(){
+  const c=crew(S.dev),a=openAlert(c.id),lv=c.level,r=reading(c);
+  const esc=lv==="kuning"&&inZoneRaw(c.x,c.y),m=esc?{...escapePt(c),name:""}:musterFor(c);
+  $("screen").className="screen "+lv;
+  $("dId").textContent=`DET-${c.id} · Kru ${c.id}`;
+  $("dSt").textContent=lv==="aman"?"AMAN":lv==="kuning"?"WASPADA":"BAHAYA · EVAKUASI";
+  $("dRs").textContent=lv==="aman"?(c.mode==="Bekerja"?"Tidak ada bahaya terdeteksi":c.mode):c.reason;
+  $("dPpm").innerHTML=`${fmt(r)}<small>ppm H₂S</small>`;
+  $("dVib").textContent=lv==="aman"?"Getar: tidak":lv==="kuning"?"Getar: 2× pendek":"Getar: terus-menerus";
+  $("dArrow").setAttribute("transform",`rotate(${bearingOf(m.x,m.y,c.x,c.y).toFixed(0)})`);
+  $("dMuster").textContent=esc?`Geser ke ${dirName(bearingOf(m.x,m.y,c.x,c.y))} · ${Math.round(dist(c,m))} m`:`${m.name} · ${Math.round(dist(c,m))} m`;
+  $("dMusterL").textContent=esc?"Arah keluar dari jalur gas":"Arah titik kumpul";
+  $("dWind").textContent=`Angin dari ${dirName(S.wind.from)} · ${fmt(S.wind.u)} m/s`;
+  $("dCount").textContent=a&&!a.ack&&a.level==="kuning"&&a.esc===0?`ACK dalam ${Math.max(0,Math.ceil(ACK_WIN-(S.t-a.t0)))} dtk`:"";
+  $("dAck").disabled=!(a&&!a.ack);
+  $("dAck").textContent=a&&a.ack?`ACK terkirim (${a.ackSec} dtk)`:"ACK";
+  const ex=lv==="aman"?["Status hijau dan angka ppm selalu tampil, jadi kru bisa menilai sendiri.","Panah menunjuk titik kumpul yang aman untuk kondisi angin saat ini.","Info perubahan angin muncul sebagai pesan, bukan alarm."]:
+    lv==="kuning"?["Tindakan murah: bergeser tegak lurus arah angin sesuai panah, lalu tekan ACK.","Tidak perlu menghentikan pekerjaan sepenuhnya. Ini yang membuat alarm kuning tetap dipatuhi.","Tanpa ACK 30 detik, gas watcher lalu supervisor ikut diberi tahu."]:
+    ["Evakuasi ke titik kumpul dan pakai SCBA.","Pekerjaan berhenti. Izin kerja harus dievaluasi ulang sebelum dilanjutkan.","Penolong hanya boleh masuk dengan SCBA."];
+  setHTML($("dExplain"),ex.map(x=>`<li>${x}</li>`).join(""));
+  const p=permitOf(c.id);
+  setHTML($("dSupport"),[`Gas watcher: ${c.watcher}${a&&a.esc>=1?" (sudah diberi tahu)":""}`,`Izin kerja ${p.id}: ${p.status.toLowerCase()}`,`Titik kumpul hulu angin hari ini: ${upwindMuster().name}`].map(x=>`<li>${x}</li>`).join(""));
+  document.querySelectorAll("button[data-crew]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.crew===S.dev));
+}
+
+/* ---------- HSE view ---------- */
+function renderHSE(){
+  const all=S.alerts,mins=Math.max(S.t/60,0.0001),rate=all.length/(mins/10)/3;
+  const done=all.filter(a=>a.end),asli=done.filter(a=>a.cat==="Asli").length,pal=done.filter(a=>a.cat.startsWith("Palsu")).length,pre=done.filter(a=>a.cat==="Pra-peringatan").length,act=all.length-done.length;
+  const acks=all.filter(a=>a.ackSec!=null&&a.level==="kuning"),avg=acks.length?acks.reduce((s,a)=>s+a.ackSec,0)/acks.length:null;
+  setHTML($("kpis"),[
+    [S.t<60?"–":fmt(rate),"per 10 menit/orang","Beban alarm",S.t<60?"Butuh minimal 1 menit data":rate<=1.2?"Sesuai target ±1 (ISA-18.2)":"Di atas target ±1 (ISA-18.2). Wajar di skenario singkat yang sengaja padat kejadian."],
+    [String(all.length),"alarm","Alarm shift ini",`${asli} asli · ${pre} pra-peringatan · ${pal} palsu${act?` · ${act} masih aktif`:""}`],
+    [avg==null?"–":fmt(avg,0),"detik","Rata-rata waktu ACK","Target < 30 detik sebelum eskalasi"],
+    [String(S.stops),"kali","Stop & evaluasi","Alarm merah yang menghentikan izin kerja"]
+  ].map(([v,u,k,t])=>`<div class="kpi"><div class="k">${k}</div><div class="v num">${v}<small>${u}</small></div><div class="t sub">${t}</div></div>`).join(""));
+  setHTML($("log"),all.length?all.slice().reverse().map(a=>`<tr><td class="num">${a.clock}</td><td>Kru ${a.crew}</td><td><span class="chip c-${a.level}">${a.level}</span></td><td>${a.firstReason}</td><td>${a.end?a.cat:"Masih aktif"}</td><td class="num">${a.ackSec==null?"–":a.ackSec+" dtk"}</td></tr>`).join(""):`<tr><td colspan="6" class="empty">Belum ada alarm di shift ini.</td></tr>`);
+  setHTML($("dets"),["A","B","C"].map(id=>{const fa=S.dets[id].fa;return`<tr><td>DET-${id}</td><td>${S.pre.dock?"Lulus":"Belum dicek"}</td><td class="num">${fa}</td><td>${fa>=2?"Tandai kalibrasi ulang":fa===1?"Pantau, cek sumber gangguan":"–"}</td></tr>`}).join(""));
+  setHTML($("recap"),all.length?`Shift ini tercatat ${all.length} alarm: ${asli} asli, ${pre} pra-peringatan dari hitungan angin, dan ${pal} palsu${pal?" akibat gangguan genset di dekat Kru A":""}. ${avg==null?"":`Rata-rata ACK ${fmt(avg,0)} detik.`} ${S.stops?`${S.stops} izin kerja dihentikan oleh alarm merah.`:"Tidak ada alarm merah."} Alarm palsu tetap ditindaklanjuti dengan geser + ACK, dan sumber gangguannya dicatat untuk tinjauan bulanan.`:"Rekap akan terisi otomatis dari log alarm dan dibacakan di briefing berikutnya.");
+}
+function render(){
+  $("clock").textContent=clock();
+  $("wdirL").textContent=`${DIRN[DIRS.indexOf(dirName(S.wind.from))]} (${Math.round(S.wind.from)}°)`;
+  $("wspdL").textContent=`${fmt(S.wind.u)} m/s${S.wind.u<1?" · angin lemah":""}`;
+  if(!$("v-sup").hidden){renderMap();renderCards();renderMini();renderCrews();renderPermits();renderPre();renderChrono();}
+  if(!$("v-dev").hidden)renderDevice();
+  if(!$("v-hse").hidden)renderHSE();
+}
+
+/* ---------- loop & events ---------- */
+let last=performance.now();
+function loop(now){const real=Math.min(1,(now-last)/1000);last=now;
+  if(S.running){let dt=real*S.speed;while(dt>0){const s=Math.min(1,dt);tick(s);dt-=s;}}
+  render();requestAnimationFrame(loop);}
+function syncPause(){$("bPause").textContent=S.running?"Jeda":"Lanjut";}
+function restart(){const v=S.dev,show=S.showSensors;fresh();S.dev=v;S.showSensors=show;$("wdir").value=135;$("wspd").value=2.2;$("leak").checked=true;buildMap();applyView();}
+$("bScenario").addEventListener("click",()=>{restart();S.scenario={t0:0,i:0};S.running=true;syncPause();});
+$("bPause").addEventListener("click",()=>{S.running=!S.running;syncPause();});
+$("bReset").addEventListener("click",()=>{restart();S.running=true;syncPause();say("Siap","Simulasi direset. Atur angin dan posisi kru di Panel simulasi, atau putar skenario Kasus D.");});
+$("speed").addEventListener("change",e=>S.speed=+e.target.value);
+$("wdir").addEventListener("input",e=>{S.windTarget=null;S.wind.from=+e.target.value;});
+$("wspd").addEventListener("input",e=>S.wind.u=+e.target.value);
+$("leak").addEventListener("change",e=>S.leak=e.target.checked);
+$("bInterf").addEventListener("click",startInterf);
+document.querySelectorAll(".tab[data-view]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab[data-view]").forEach(x=>x.setAttribute("aria-selected",x===b));
+  ["sup","dev","hse"].forEach(v=>$("v-"+v).hidden=v!==b.dataset.view);
+  try{localStorage.setItem("pg-view",b.dataset.view)}catch(e){}
+  render();
+}));
+document.querySelectorAll("button[data-crew]").forEach(b=>b.addEventListener("click",()=>{S.dev=b.dataset.crew;}));
+$("dAck").addEventListener("click",()=>ack(S.dev,"dari detektor"));
+$("mAck").addEventListener("click",()=>ack(focusCrew().id,"dari detektor"));
+// map controls
+$("mZin").addEventListener("click",()=>{S.view.z=Math.min(3,S.view.z*1.5);applyView();});
+$("mZout").addEventListener("click",()=>{S.view.z=Math.max(1,S.view.z/1.5);applyView();});
+$("mCompass").addEventListener("click",()=>{S.view={cx:500,cy:320,z:1};applyView();});
+$("mLocate").addEventListener("click",()=>{const c=focusCrew();S.view={cx:c.x,cy:c.y,z:2};applyView();});
+$("mLayers").addEventListener("click",e=>{S.showSensors=!S.showSensors;e.currentTarget.setAttribute("aria-pressed",S.showSensors);});
+document.addEventListener("click",e=>{const t=e.target.closest("button,[data-focus]");if(!t)return;
+  if(t.dataset.evac){evac(t.dataset.evac);return;}
+  if(t.dataset.reeval){reeval(t.dataset.reeval);return;}
+  if(t.dataset.pre){S.pre[t.dataset.pre]=true;say("Pra-kerja",t.dataset.pre==="dock"?"Bump test selesai di dock: 12/12 lulus, DET-07 terkunci dan diganti.":"Briefing pra-kerja selesai.");return;}
+  if(t.dataset.focus){S.focus=t.dataset.focus;}});
+document.addEventListener("keydown",e=>{const t=e.target.closest?.("[data-focus]");if(t&&(e.key==="Enter"||e.key===" ")&&!e.target.closest("button")){e.preventDefault();S.focus=t.dataset.focus;}});
+document.addEventListener("change",e=>{if(e.target.id==="preWind")S.pre.wind=e.target.value;});
+// drag crews on the map (also selects the crew for the mini detector)
+const svg=$("map");let drag=null;
+function svgPt(ev){const p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+svg.addEventListener("pointerdown",ev=>{const p=svgPt(ev);const c=S.crews.find(c=>Math.hypot(c.x-p.x,c.y-p.y)<24);if(!c)return;drag=c;S.focus=c.id;c.move=null;svg.setPointerCapture(ev.pointerId);});
+svg.addEventListener("pointermove",ev=>{if(!drag)return;const p=svgPt(ev);drag.x=Math.max(10,Math.min(990,p.x));drag.y=Math.max(10,Math.min(630,p.y));});
+svg.addEventListener("pointerup",()=>{if(drag){drag.mode="Bekerja";drag=null;}});
+
+fresh();buildMap();applyView();
+try{const v=localStorage.getItem("pg-view");if(v&&v!=="sup")document.querySelector(`.tab[data-view="${v}"]`)?.click();}catch(e){}
+S.running=true;syncPause();
+requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
